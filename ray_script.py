@@ -2,15 +2,17 @@
 This software is based on Luis Sena's code on Medium
 Link: https://luis-sena.medium.com/sharing-big-numpy-arrays-
 across-python-processes-abf0dc2a0ab2
-"""
 
+TODO: use this for experiments
+"""
+import ray
 import multiprocessing
 import time
-import ray
+import itertools
 import numpy as np
 from dist_ising_lattice import DistIsingLattice
-from lattice_zoo import square
-import itertools
+from latt_zoo import square
+
 
 NUM_WORKERS = multiprocessing.cpu_count() - 2
 # ray init can take 3 seconds or more to load
@@ -92,7 +94,8 @@ def benchmark():
     shared_size = len(model.smc_arr.multicore_imap)
     shared_mem = SharedMemory(name='SharedMem',
                               size=shared_size,
-                              create=True)
+                              create=True,
+                              )
     obj_ref = ray.put(shared_state_prop)
 
     for cpu_id in itertools.product(*[range(d) for d in CPU_GRID]):

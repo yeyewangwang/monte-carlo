@@ -19,7 +19,7 @@ class SelectiveMultiCoreArray:
         self.arr = arr
         # This array must be in a cached location across
         # cores.
-        self.shared_arr = np.zeros(())
+        self.shared_arr = np.zeros((0,))
         # Map index in self.properties to index in multicore
         # states
         self.multicore_imap = {}
@@ -41,13 +41,14 @@ class SelectiveMultiCoreArray:
         if i not in self.multicore_imap:
             self.shared_arr = np.append(self.shared_arr, i)
             self.multicore_imap[i] = len(self.shared_arr) - 1
+            # print(len(self.shared_arr) - 1)
 
     def share_and_put(self, i, val):
         self.share(i)
         self.put(i, val)
 
 
-class DistIsingLattice:
+class LattBlocks:
     """
     Class to keep track of properties and the lattice
     together
@@ -60,14 +61,13 @@ class DistIsingLattice:
         """
         self.lattice = lattice
 
-        self.state_property = np.ones((self.lattice.num_sites,
-                                        num_properties))
+        self.state_property = np.ones((self.lattice.num_sites,))
         self.smc_arr = SelectiveMultiCoreArray(self.state_property)
         # Maps the CPU index to the lattice nodes it is
         # responsible for
         self.cpu_allotments = {}
 
-    def build_smc(self, cpu_grid_shape):
+    def build_smc(self, cpu_grid_shape, section_atol=0.52):
         """
         Assign nodes to cores and find the nodes that
         should be shared across cores.
@@ -75,7 +75,7 @@ class DistIsingLattice:
         cpu_num = np.prod(cpu_grid_shape)
 
         cell_size = self.lattice.cell_size
-        section_atol = cell_size * 0.52
+        section_atol = cell_size * section_atol
 
         limits = self.lattice.limits()
         section_lens = []
@@ -100,8 +100,12 @@ class DistIsingLattice:
 
                 cpu_index = int(
                     np.floor(col_val / section_lens[d]))
+                # TODO: verify this
+                # Correct for potential floating point errors
                 if cpu_index >= cpu_grid_shape[d]:
                     cpu_index -= 1
+                if cpu_index < 0:
+                    cpu_index = 0
                 cpu_coords.append(cpu_index)
 
             if np.prod(cpu_coords) >=cpu_num:
